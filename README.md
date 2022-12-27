@@ -1,3 +1,3 @@
-# Benchmark to test the PSA Crypto API
+# Benchmark for the PSA Crypto API
 
 
