@@ -1,0 +1,76 @@
+
+The MbedTLS config file needs to contain the following directives:
+
+#define MBEDTLS_PLATFORM_C
+#define MBEDTLS_PLATFORM_MEMORY
+
+
+
+In main define two functions, MyCalloc and MyFree:
+
+
+#ifdef MBEDTLS_PLATFORM_MEMORY
+unsigned int mem_count = 0;
+unsigned int mem_max = 0;
+
+void* MyCalloc(size_t n, size_t size)
+{
+    void* p = NULL;
+    unsigned int* p32;
+
+    unsigned int tot_size = (n*size);
+
+    // mbedtls_printf("n %d size %d tot_size %d\n",n,size,tot_size);
+
+    p32 = k_malloc(tot_size + (sizeof(unsigned int) * 4));
+    
+    if(p32 == NULL)
+       return NULL;
+       
+    memset(p32, 0, tot_size + (sizeof(unsigned int) * 4));
+
+    if(p32 != NULL){
+        p32[0] = (unsigned int) tot_size;
+        p = (void*)(p32 + 4);
+
+        mem_count += tot_size;
+        if(mem_count > mem_max){
+            mem_max = mem_count;
+        }
+    }
+
+   // mbedtls_printf("Alloc: %p -> %u COUNT %d MAX IS: %d\n", p, (unsigned int) tot_size , mem_count,mem_max);
+
+    return p;
+}
+
+void MyFree(void* ptr)
+{
+    unsigned int* p32 = (unsigned int*)ptr;
+
+    if (ptr != NULL) {
+        p32 -= 4;
+
+        mem_count -= p32[0];
+        if(mem_count > mem_max){
+            mem_max = mem_count;
+        }
+
+       // mbedtls_printf("Free: %p -> %u COUNT %d MAX %d\n", ptr, p32[0], mem_count, mem_max);
+        k_free(p32);
+    }
+
+}
+#endif /* MBEDTLS_PLATFORM_MEMORY */
+
+
+
+In main, early in the start set the functions:
+
+
+
+#ifdef MBEDTLS_PLATFORM_MEMORY
+    mbedtls_platform_set_calloc_free(MyCalloc,MyFree);
+#endif
+
+
